@@ -1,5 +1,5 @@
 // file: internal/triagepoll/github.go
-// version: 1.0.0
+// version: 2.0.0
 // guid: 4e5f6a7b-8c9d-0e1f-2a3b-4c5d6e7f8a9b
 //
 // GitHub interactions for the triage-poll state machine: querying untriaged
@@ -144,7 +144,7 @@ func CloseTrackingIssue(ctx context.Context, gh *github.Client, hubOwner, hubNam
 }
 
 // WriteTriageResult posts the triage decision as a comment on the issue
-// and adds the triaged label.
+// and adds the triaged + priority labels.
 func WriteTriageResult(ctx context.Context, gh *github.Client, hubOwner, hubName string, issueNumber int, d Decision) error {
 	body := formatTriageComment(d)
 	if _, _, err := gh.Issues.CreateComment(ctx, hubOwner, hubName, issueNumber, &github.IssueComment{
@@ -152,7 +152,11 @@ func WriteTriageResult(ctx context.Context, gh *github.Client, hubOwner, hubName
 	}); err != nil {
 		return fmt.Errorf("triagepoll: comment #%d: %w", issueNumber, err)
 	}
-	if _, _, err := gh.Issues.AddLabelsToIssue(ctx, hubOwner, hubName, issueNumber, []string{LabelTriaged}); err != nil {
+	labels := []string{LabelTriaged}
+	if d.Priority != "" {
+		labels = append(labels, "priority:"+d.Priority)
+	}
+	if _, _, err := gh.Issues.AddLabelsToIssue(ctx, hubOwner, hubName, issueNumber, labels); err != nil {
 		return fmt.Errorf("triagepoll: label #%d: %w", issueNumber, err)
 	}
 	return nil
@@ -167,6 +171,10 @@ func EnsureLabelsExist(ctx context.Context, gh *github.Client, hubOwner, hubName
 	}{
 		{LabelTriaged, "0e8a16", "Triage decision written; ready for dispatch"},
 		{LabelBatchPending, "e4e669", "OpenAI batch triage in flight"},
+		{"priority:P0", "b60205", "Production outage / data loss / security"},
+		{"priority:P1", "d93f0b", "Core feature broken; blocks other work"},
+		{"priority:P2", "e4e669", "Standard bug fix or feature"},
+		{"priority:P3", "c5def5", "Minor improvement or cleanup"},
 	}
 	for _, l := range needed {
 		_, resp, err := gh.Issues.GetLabel(ctx, hubOwner, hubName, l.name)
@@ -227,23 +235,42 @@ func formatTriageComment(d Decision) string {
 		"NEEDS_REVIEW":    "👀",
 		"BLOCKED":         "🚫",
 	}
+	priorityEmoji := map[string]string{
+		"P0": "🔴",
+		"P1": "🟠",
+		"P2": "🟡",
+		"P3": "🟢",
+	}
 	emoji := classEmoji[d.Classification]
 	if emoji == "" {
 		emoji = "•"
+	}
+	pEmoji := priorityEmoji[d.Priority]
+	if pEmoji == "" {
+		pEmoji = "•"
 	}
 
 	branch := d.SuggestedBranch
 	if branch == "" {
 		branch = "_(none — blocked)_"
+	} else {
+		branch = "`" + branch + "`"
+	}
+
+	area := d.AffectedArea
+	if area == "" {
+		area = "unknown"
 	}
 
 	return fmt.Sprintf(`<!-- burndown-triage: %s -->
-<details><summary>%s Burndown triage decision</summary>
+<details><summary>%s Burndown triage — %s %s</summary>
 
 | Field | Value |
 |---|---|
 | **Classification** | %s |
+| **Priority** | %s %s |
 | **Complexity** | %d / 5 |
+| **Affected area** | %s |
 | **Suggested branch** | %s |
 | **Reason** | %s |
 
@@ -251,8 +278,12 @@ func formatTriageComment(d Decision) string {
 		d.Classification,
 		emoji,
 		d.Classification,
+		pEmoji+d.Priority,
+		d.Classification,
+		pEmoji, d.Priority,
 		d.EstComplexity,
-		"`"+branch+"`",
+		area,
+		branch,
 		d.Reason,
 	)
 }
