@@ -151,7 +151,7 @@ var defaultAllowedTools = []string{
 // MCP are returned as-is — the caller decides whether to retry.
 func Run(ctx context.Context, opts Options) (*Result, error) {
 	if opts.MaxIterations <= 0 {
-		opts.MaxIterations = 60
+		opts.MaxIterations = 90
 	}
 	if opts.MaxTokens <= 0 {
 		opts.MaxTokens = 16000
