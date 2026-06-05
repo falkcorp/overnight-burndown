@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/go-github/v84/github"
 
-	"github.com/jdfalk/overnight-burndown/internal/state"
+	"github.com/falkcorp/overnight-burndown/internal/state"
 )
 
 // IssueCollector pulls open issues from a GitHub repository via the REST API.

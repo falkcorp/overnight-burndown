@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jdfalk/overnight-burndown/internal/config"
+	"github.com/falkcorp/overnight-burndown/internal/config"
 )
 
 // fixtureCfg returns a BudgetConfig that's plausible for a nightly run.

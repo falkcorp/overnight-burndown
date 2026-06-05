@@ -24,13 +24,13 @@ import (
 	"github.com/openai/openai-go/v3"
 	openaiOption "github.com/openai/openai-go/v3/option"
 
-	"github.com/jdfalk/overnight-burndown/internal/agent"
-	"github.com/jdfalk/overnight-burndown/internal/config"
-	"github.com/jdfalk/overnight-burndown/internal/dispatch"
-	"github.com/jdfalk/overnight-burndown/internal/mcp"
-	"github.com/jdfalk/overnight-burndown/internal/runner"
-	"github.com/jdfalk/overnight-burndown/internal/state"
-	"github.com/jdfalk/overnight-burndown/internal/version"
+	"github.com/falkcorp/overnight-burndown/internal/agent"
+	"github.com/falkcorp/overnight-burndown/internal/config"
+	"github.com/falkcorp/overnight-burndown/internal/dispatch"
+	"github.com/falkcorp/overnight-burndown/internal/mcp"
+	"github.com/falkcorp/overnight-burndown/internal/runner"
+	"github.com/falkcorp/overnight-burndown/internal/state"
+	"github.com/falkcorp/overnight-burndown/internal/version"
 )
 
 func main() {

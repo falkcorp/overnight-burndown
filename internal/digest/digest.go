@@ -24,10 +24,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jdfalk/overnight-burndown/internal/budget"
-	"github.com/jdfalk/overnight-burndown/internal/dispatch"
-	"github.com/jdfalk/overnight-burndown/internal/state"
-	"github.com/jdfalk/overnight-burndown/internal/triage"
+	"github.com/falkcorp/overnight-burndown/internal/budget"
+	"github.com/falkcorp/overnight-burndown/internal/dispatch"
+	"github.com/falkcorp/overnight-burndown/internal/state"
+	"github.com/falkcorp/overnight-burndown/internal/triage"
 )
 
 // Input is everything the digest renderer needs. The orchestrator

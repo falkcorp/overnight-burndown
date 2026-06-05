@@ -4,7 +4,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/jdfalk/overnight-burndown/internal/triage"
+	"github.com/falkcorp/overnight-burndown/internal/triage"
 )
 
 // MergeDecision is the verdict from the auto-merge gate.

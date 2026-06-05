@@ -13,8 +13,8 @@ import (
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
 
-	"github.com/jdfalk/overnight-burndown/internal/config"
-	"github.com/jdfalk/overnight-burndown/internal/decompose"
+	"github.com/falkcorp/overnight-burndown/internal/config"
+	"github.com/falkcorp/overnight-burndown/internal/decompose"
 )
 
 // cmdDecompose reads [failed-batch-hard] items from the target repo's

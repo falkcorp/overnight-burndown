@@ -27,7 +27,7 @@ import (
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
 
-	"github.com/jdfalk/overnight-burndown/internal/config"
+	"github.com/falkcorp/overnight-burndown/internal/config"
 )
 
 // DefaultGitHubAPI is the canonical github.com REST endpoint. Tests override

@@ -17,10 +17,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/jdfalk/overnight-burndown/internal/config"
-	"github.com/jdfalk/overnight-burndown/internal/dispatch"
-	"github.com/jdfalk/overnight-burndown/internal/runner"
-	"github.com/jdfalk/overnight-burndown/internal/state"
+	"github.com/falkcorp/overnight-burndown/internal/config"
+	"github.com/falkcorp/overnight-burndown/internal/dispatch"
+	"github.com/falkcorp/overnight-burndown/internal/runner"
+	"github.com/falkcorp/overnight-burndown/internal/state"
 )
 
 // cmdTriage runs collect+triage for every repo and writes the result

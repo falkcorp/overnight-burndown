@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jdfalk/overnight-burndown/internal/sources"
+	"github.com/falkcorp/overnight-burndown/internal/sources"
 )
 
 // Classification is the triage decision. Strings match the system prompt's

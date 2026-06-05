@@ -15,8 +15,8 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/jdfalk/overnight-burndown/internal/config"
-	"github.com/jdfalk/overnight-burndown/internal/triagepoll"
+	"github.com/falkcorp/overnight-burndown/internal/config"
+	"github.com/falkcorp/overnight-burndown/internal/triagepoll"
 )
 
 // cmdTriagePoll parses `triage-poll` flags and runs one iteration.
