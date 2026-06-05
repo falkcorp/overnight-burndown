@@ -43,15 +43,15 @@ import (
 	openaiOption "github.com/openai/openai-go/v3/option"
 	"github.com/google/go-github/v84/github"
 
-	"github.com/jdfalk/overnight-burndown/internal/auth"
-	"github.com/jdfalk/overnight-burndown/internal/budget"
-	"github.com/jdfalk/overnight-burndown/internal/config"
-	"github.com/jdfalk/overnight-burndown/internal/digest"
-	"github.com/jdfalk/overnight-burndown/internal/dispatch"
-	"github.com/jdfalk/overnight-burndown/internal/ghops"
-	"github.com/jdfalk/overnight-burndown/internal/sources"
-	"github.com/jdfalk/overnight-burndown/internal/state"
-	"github.com/jdfalk/overnight-burndown/internal/triage"
+	"github.com/falkcorp/overnight-burndown/internal/auth"
+	"github.com/falkcorp/overnight-burndown/internal/budget"
+	"github.com/falkcorp/overnight-burndown/internal/config"
+	"github.com/falkcorp/overnight-burndown/internal/digest"
+	"github.com/falkcorp/overnight-burndown/internal/dispatch"
+	"github.com/falkcorp/overnight-burndown/internal/ghops"
+	"github.com/falkcorp/overnight-burndown/internal/sources"
+	"github.com/falkcorp/overnight-burndown/internal/state"
+	"github.com/falkcorp/overnight-burndown/internal/triage"
 )
 
 // RepoPublisher is the subset of *ghops.Publisher Runner uses. Pulled

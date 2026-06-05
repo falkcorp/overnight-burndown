@@ -36,10 +36,10 @@ import (
 	"github.com/anthropics/anthropic-sdk-go"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/jdfalk/overnight-burndown/internal/agent"
-	"github.com/jdfalk/overnight-burndown/internal/sources"
-	"github.com/jdfalk/overnight-burndown/internal/state"
-	"github.com/jdfalk/overnight-burndown/internal/triage"
+	"github.com/falkcorp/overnight-burndown/internal/agent"
+	"github.com/falkcorp/overnight-burndown/internal/sources"
+	"github.com/falkcorp/overnight-burndown/internal/state"
+	"github.com/falkcorp/overnight-burndown/internal/triage"
 )
 
 // TaskWithDecision pairs a collected task with its triage decision. This

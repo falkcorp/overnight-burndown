@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jdfalk/overnight-burndown/internal/state"
+	"github.com/falkcorp/overnight-burndown/internal/state"
 )
 
 // PlanCollector reads each `plans/*.md` file at the repo root and emits

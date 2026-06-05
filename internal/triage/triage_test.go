@@ -11,8 +11,8 @@ import (
 
 	"github.com/anthropics/anthropic-sdk-go/option"
 
-	"github.com/jdfalk/overnight-burndown/internal/sources"
-	"github.com/jdfalk/overnight-burndown/internal/state"
+	"github.com/falkcorp/overnight-burndown/internal/sources"
+	"github.com/falkcorp/overnight-burndown/internal/state"
 )
 
 // fakeAnthropic spins an httptest server that pretends to be /v1/messages.

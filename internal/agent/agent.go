@@ -23,9 +23,9 @@ import (
 
 	"github.com/anthropics/anthropic-sdk-go"
 
-	"github.com/jdfalk/overnight-burndown/internal/mcp"
-	"github.com/jdfalk/overnight-burndown/internal/sources"
-	"github.com/jdfalk/overnight-burndown/internal/triage"
+	"github.com/falkcorp/overnight-burndown/internal/mcp"
+	"github.com/falkcorp/overnight-burndown/internal/sources"
+	"github.com/falkcorp/overnight-burndown/internal/triage"
 )
 
 // MCPClient is the subset of *mcp.Client this package uses.

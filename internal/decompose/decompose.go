@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go"
-	"github.com/jdfalk/overnight-burndown/internal/sources"
+	"github.com/falkcorp/overnight-burndown/internal/sources"
 )
 
 const decomposeModel = "claude-haiku-4-5-20251001"

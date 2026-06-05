@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jdfalk/overnight-burndown/internal/agent"
-	"github.com/jdfalk/overnight-burndown/internal/budget"
-	"github.com/jdfalk/overnight-burndown/internal/dispatch"
-	"github.com/jdfalk/overnight-burndown/internal/sources"
-	"github.com/jdfalk/overnight-burndown/internal/state"
-	"github.com/jdfalk/overnight-burndown/internal/triage"
+	"github.com/falkcorp/overnight-burndown/internal/agent"
+	"github.com/falkcorp/overnight-burndown/internal/budget"
+	"github.com/falkcorp/overnight-burndown/internal/dispatch"
+	"github.com/falkcorp/overnight-burndown/internal/sources"
+	"github.com/falkcorp/overnight-burndown/internal/state"
+	"github.com/falkcorp/overnight-burndown/internal/triage"
 )
 
 // fixtureDate is a stable date so test output doesn't drift.

@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/jdfalk/overnight-burndown/internal/state"
+	"github.com/falkcorp/overnight-burndown/internal/state"
 )
 
 // regexpMustCompile is a single-line alias for regexp.MustCompile so the

@@ -16,9 +16,9 @@ import (
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/google/go-github/v84/github"
 
-	"github.com/jdfalk/overnight-burndown/internal/config"
-	"github.com/jdfalk/overnight-burndown/internal/state"
-	"github.com/jdfalk/overnight-burndown/internal/triage"
+	"github.com/falkcorp/overnight-burndown/internal/config"
+	"github.com/falkcorp/overnight-burndown/internal/state"
+	"github.com/falkcorp/overnight-burndown/internal/triage"
 )
 
 // fixtureRepo creates a minimal local repo with a TODO.md and returns its path.

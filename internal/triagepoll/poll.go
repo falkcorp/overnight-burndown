@@ -29,8 +29,8 @@ import (
 
 	"github.com/google/go-github/v84/github"
 
-	"github.com/jdfalk/overnight-burndown/internal/auth"
-	"github.com/jdfalk/overnight-burndown/internal/config"
+	"github.com/falkcorp/overnight-burndown/internal/auth"
+	"github.com/falkcorp/overnight-burndown/internal/config"
 )
 
 // PollConfig carries everything Poll() needs in one struct so callers don't

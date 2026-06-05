@@ -14,7 +14,7 @@ import (
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/shared"
 
-	"github.com/jdfalk/overnight-burndown/internal/mcp"
+	"github.com/falkcorp/overnight-burndown/internal/mcp"
 )
 
 // retryAfterRe extracts the "try again in X.Ys" hint OpenAI emits in the

@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jdfalk/overnight-burndown/internal/config"
+	"github.com/falkcorp/overnight-burndown/internal/config"
 )
 
 // Pricing captures the four ratecards we care about per model.

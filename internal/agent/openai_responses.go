@@ -44,7 +44,7 @@ import (
 	"github.com/openai/openai-go/v3/responses"
 	"github.com/openai/openai-go/v3/shared"
 
-	"github.com/jdfalk/overnight-burndown/internal/mcp"
+	"github.com/falkcorp/overnight-burndown/internal/mcp"
 )
 
 // stderr is overridable in tests; production points at os.Stderr.

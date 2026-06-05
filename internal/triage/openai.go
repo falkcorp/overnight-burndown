@@ -12,7 +12,7 @@ import (
 	"github.com/openai/openai-go/v3/responses"
 	"github.com/openai/openai-go/v3/shared"
 
-	"github.com/jdfalk/overnight-burndown/internal/sources"
+	"github.com/falkcorp/overnight-burndown/internal/sources"
 )
 
 // OpenAITriager classifies tasks via OpenAI's Responses API + function calling.

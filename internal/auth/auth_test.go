@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jdfalk/overnight-burndown/internal/config"
+	"github.com/falkcorp/overnight-burndown/internal/config"
 )
 
 // generateTestKey creates a fresh RSA private key and writes it to a PEM file
