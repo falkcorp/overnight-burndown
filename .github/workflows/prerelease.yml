@@ -26,7 +26,7 @@ permissions:
 jobs:
   prerelease:
     name: Build + publish burndown binary
-    uses: falkcorp/github-common/.github/workflows/reusable-release.yml@dd8fae111732e9bdc7fed56a0f4d68cb0fd17d34 # main (post GH_TOKEN fix)
+    uses: falkcorp/github-common/.github/workflows/reusable-release.yml@bfb912c8e63e7f8e33df9c20c5c25c04083ec0b4 # v1.10.7
     with:
       release-type: 'auto'
       prerelease: true
