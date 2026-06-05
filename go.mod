@@ -1,4 +1,4 @@
-module github.com/jdfalk/overnight-burndown
+module github.com/falkcorp/overnight-burndown
 
 go 1.25.0
 

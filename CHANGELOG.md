@@ -263,6 +263,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Notes
 - Trust boundary: filesystem, exec, and git operations route through
-  [safe-ai-util](https://github.com/jdfalk/safe-ai-util) via
-  [safe-ai-util-mcp](https://github.com/jdfalk/safe-ai-util-mcp). GitHub App
+  [safe-ai-util](https://github.com/falkcorp/safe-ai-util) via
+  [safe-ai-util-mcp](https://github.com/falkcorp/safe-ai-util-mcp). GitHub App
   operations stay in the Go driver — agents never receive the App token.
