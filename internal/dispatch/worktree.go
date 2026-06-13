@@ -1,3 +1,8 @@
+// file: internal/dispatch/worktree.go
+// version: 1.1.0
+// guid: a3b4c5d6-e7f8-4a9b-8c0d-1e2f3a4b5c6d
+// last-edited: 2026-06-13
+
 package dispatch
 
 import (
@@ -59,6 +64,9 @@ func AddWorktree(ctx context.Context, repoPath, branch, path string, excludePath
 			return nil, fmt.Errorf("apply sparse-checkout exclude: %w", err)
 		}
 	}
+	// Populate submodules (e.g. .standards/) in the new worktree. Non-fatal:
+	// repos without submodules are fine and network blips shouldn't abort setup.
+	_ = exec.CommandContext(ctx, "git", "-C", path, "submodule", "update", "--init", "--recursive").Run()
 	return &Worktree{Path: path, Branch: branch}, nil
 }
 
