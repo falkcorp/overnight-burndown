@@ -1,5 +1,5 @@
 // file: internal/triagepoll/github.go
-// version: 2.0.0
+// version: 2.0.1
 // guid: 4e5f6a7b-8c9d-0e1f-2a3b-4c5d6e7f8a9b
 //
 // GitHub interactions for the triage-poll state machine: querying untriaged
@@ -114,8 +114,8 @@ func CreateTrackingIssue(ctx context.Context, gh *github.Client, hubOwner, hubNa
 	body := fmt.Sprintf("<!-- batch_id: %s -->\n\nBatch triage submitted for **%s** (%d issues).\n\nBatch ID: `%s`\n\nThis issue will be closed automatically when the batch completes.",
 		batchID, repoName, issueCount, batchID)
 	req := &github.IssueRequest{
-		Title:  github.String(trackingTitle(repoName)),
-		Body:   github.String(body),
+		Title:  github.Ptr(trackingTitle(repoName)),
+		Body:   github.Ptr(body),
 		Labels: &[]string{LabelBatchPending},
 	}
 	iss, _, err := gh.Issues.Create(ctx, hubOwner, hubName, req)
@@ -129,7 +129,7 @@ func CreateTrackingIssue(ctx context.Context, gh *github.Client, hubOwner, hubNa
 func CloseTrackingIssue(ctx context.Context, gh *github.Client, hubOwner, hubName string, issueNumber int, comment string) error {
 	if comment != "" {
 		_, _, err := gh.Issues.CreateComment(ctx, hubOwner, hubName, issueNumber, &github.IssueComment{
-			Body: github.String(comment),
+			Body: github.Ptr(comment),
 		})
 		if err != nil {
 			return fmt.Errorf("triagepoll: comment tracking issue: %w", err)
@@ -148,7 +148,7 @@ func CloseTrackingIssue(ctx context.Context, gh *github.Client, hubOwner, hubNam
 func WriteTriageResult(ctx context.Context, gh *github.Client, hubOwner, hubName string, issueNumber int, d Decision) error {
 	body := formatTriageComment(d)
 	if _, _, err := gh.Issues.CreateComment(ctx, hubOwner, hubName, issueNumber, &github.IssueComment{
-		Body: github.String(body),
+		Body: github.Ptr(body),
 	}); err != nil {
 		return fmt.Errorf("triagepoll: comment #%d: %w", issueNumber, err)
 	}
@@ -183,9 +183,9 @@ func EnsureLabelsExist(ctx context.Context, gh *github.Client, hubOwner, hubName
 		}
 		if resp != nil && resp.StatusCode == 404 {
 			_, _, err = gh.Issues.CreateLabel(ctx, hubOwner, hubName, &github.Label{
-				Name:        github.String(l.name),
-				Color:       github.String(l.color),
-				Description: github.String(l.desc),
+				Name:        github.Ptr(l.name),
+				Color:       github.Ptr(l.color),
+				Description: github.Ptr(l.desc),
 			})
 			if err != nil {
 				return fmt.Errorf("triagepoll: create label %q: %w", l.name, err)
