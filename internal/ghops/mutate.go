@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/google/go-github/v84/github"
 )
@@ -39,6 +40,68 @@ mutation EnableAutoMerge($id: ID!) {
   }
 }`
 	return p.runGraphQL(ctx, mutation, map[string]any{"id": *pr.NodeID})
+}
+
+// WaitForMergeOptions controls the polling behavior of WaitForMerge.
+type WaitForMergeOptions struct {
+	// Timeout caps the total wait. Default 60 seconds — AutoMerge is only
+	// called after WatchCI already confirmed checks are green, so in the
+	// common case GitHub completes the merge within a few seconds; this
+	// is a confirmation poll, not a second CI wait.
+	Timeout time.Duration
+	// PollInterval is how often we re-check merged status. Default 5s.
+	PollInterval time.Duration
+	// Now is injectable for testing time-dependent logic. nil → time.Now.
+	Now func() time.Time
+}
+
+// WaitForMerge polls the PR until GitHub reports it merged or the timeout
+// expires. AutoMerge only *enables* GitHub's async auto-merge mutation —
+// it does not itself confirm a merge happened. Callers that mark a task
+// StatusShipped based on AutoMerge succeeding were doing so on faith: if
+// a required check appeared after enablement, an approval was revoked, or
+// the merge queue rejected the PR, it could stay open indefinitely while
+// state and the digest both claimed "shipped" — and nothing else in this
+// codebase ever re-examines a StatusShipped row once set (see
+// ReconcileFromGitHub, which treats existing rows as authoritative).
+// Returns (true, nil) only when GitHub confirms the merge; (false, nil)
+// on a clean timeout (caller should NOT treat the task as shipped).
+func (p *Publisher) WaitForMerge(ctx context.Context, prNumber int, opts WaitForMergeOptions) (bool, error) {
+	if opts.Timeout <= 0 {
+		opts.Timeout = 60 * time.Second
+	}
+	if opts.PollInterval <= 0 {
+		opts.PollInterval = 5 * time.Second
+	}
+	now := opts.Now
+	if now == nil {
+		now = time.Now
+	}
+
+	deadline := now().Add(opts.Timeout)
+	for {
+		pr, _, err := p.GitHub.PullRequests.Get(ctx, p.Owner, p.Name, prNumber)
+		if err != nil {
+			return false, fmt.Errorf("ghops: get PR %d: %w", prNumber, err)
+		}
+		if pr.GetMerged() {
+			return true, nil
+		}
+		if pr.GetState() == "closed" {
+			// Closed without merging (e.g. someone closed it manually,
+			// or the merge queue rejected it) -- not a timeout, but
+			// also never going to become merged by waiting longer.
+			return false, nil
+		}
+		if !now().Before(deadline) {
+			return false, nil
+		}
+		select {
+		case <-ctx.Done():
+			return false, ctx.Err()
+		case <-time.After(opts.PollInterval):
+		}
+	}
 }
 
 // ConvertToDraft toggles the PR back to draft state. Used when an

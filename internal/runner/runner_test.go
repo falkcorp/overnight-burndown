@@ -203,6 +203,83 @@ func TestRun_DryRun_EndToEnd(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// SaveDir failure at end of run surfaces via StateSaveError, not silently
+// swallowed. Regression test for the bug where a failed state persist
+// still produced exit code 0 with only a buried stderr line.
+// ---------------------------------------------------------------------------
+
+func TestRun_StateSaveFailure_SurfacedNotSwallowed(t *testing.T) {
+	repoPath := fixtureRepo(t)
+	tmp := t.TempDir()
+
+	anthropicURL, cleanupA := fakeAnthropic(t, []map[string]any{
+		{
+			"task_id":          "TODO.md#L3",
+			"classification":   "AUTO_MERGE_SAFE",
+			"reason":           "doc-only typo",
+			"est_complexity":   1,
+			"suggested_branch": "auto/readme-typo",
+		},
+		{
+			"task_id":          "TODO.md#L4",
+			"classification":   "NEEDS_REVIEW",
+			"reason":           "refactor — needs human review",
+			"est_complexity":   3,
+			"suggested_branch": "draft/refactor-dispatcher",
+		},
+	})
+	defer cleanupA()
+
+	ghClient, cleanupG := fakeIssuesAPI(t)
+	defer cleanupG()
+
+	// Run() itself MkdirAll's StateDir before any work happens, so that
+	// part must succeed. SaveDir separately does
+	// `os.MkdirAll(filepath.Join(dir, "tasks"), ...)` at the very end —
+	// pre-create "tasks" as a regular file (not a directory) inside a
+	// otherwise-valid StateDir so only that later, narrower MkdirAll
+	// fails, deterministically reproducing a real disk condition (a
+	// stale non-directory left at that path) without OS-specific
+	// permission tricks.
+	stateDir := filepath.Join(tmp, "state")
+	if err := os.MkdirAll(stateDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(stateDir, "tasks"), []byte("not a directory"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := minimalConfig(t, stateDir, filepath.Join(tmp, "digests"), repoPath)
+	st := state.New()
+
+	r := &Runner{
+		Config:    cfg,
+		State:     st,
+		Anthropic: anthropic.NewClient(option.WithAPIKey("test"), option.WithBaseURL(anthropicURL)),
+		Triager:   triage.NewTriager("claude-opus-4-7", option.WithAPIKey("test"), option.WithBaseURL(anthropicURL)),
+		Now:       func() time.Time { return time.Date(2026, 4, 25, 23, 0, 0, 0, time.UTC) },
+		NewGitHub: func(_ *http.Client) *github.Client { return ghClient },
+	}
+	t.Setenv("ANTHROPIC_API_KEY", "test")
+
+	res, err := r.Run(context.Background())
+	if err != nil {
+		t.Fatalf("Run: %v (SaveDir failure must not abort the run itself — outcomes/digest already happened)", err)
+	}
+	if res.StateSaveError == nil {
+		t.Fatal("expected StateSaveError to be set when SaveDir fails")
+	}
+	// The real work still completed and is still visible in the result —
+	// a state-persistence failure at the very end must not discard it.
+	if len(res.Outcomes) != 2 {
+		t.Errorf("expected 2 outcomes despite SaveDir failure, got %d", len(res.Outcomes))
+	}
+	if res.DigestPath == "" {
+		t.Error("expected DigestPath to still be set despite SaveDir failure")
+	}
+}
+
+// ---------------------------------------------------------------------------
 // PAUSE file aborts before any work happens
 // ---------------------------------------------------------------------------
 
