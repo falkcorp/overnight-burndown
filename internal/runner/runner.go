@@ -64,6 +64,7 @@ type RepoPublisher interface {
 	WatchCI(ctx context.Context, prNumber int, opts ghops.WatchOptions) (ghops.CIStatus, error)
 	ListChangedFiles(ctx context.Context, prNumber int) ([]ghops.ChangedFile, error)
 	AutoMerge(ctx context.Context, prNumber int) error
+	WaitForMerge(ctx context.Context, prNumber int, opts ghops.WaitForMergeOptions) (bool, error)
 	ConvertToDraft(ctx context.Context, prNumber int) error
 	AddLabel(ctx context.Context, prNumber int, label string) error
 	CommentOnPR(ctx context.Context, prNumber int, body string) error
@@ -123,6 +124,14 @@ type RunResult struct {
 	Stats          budget.Stats
 	Digest         string
 	DigestPath     string
+	// StateSaveError is set when State.SaveDir failed at the end of the
+	// run. Deliberately NOT folded into Run's returned error — per Run's
+	// contract that error means "the run didn't happen at all" — but
+	// callers should still treat it as a real problem: any Upsert()
+	// calls made during this run may not have persisted, so the next
+	// run's filterFreshTasks could see stale status and re-dispatch
+	// already-shipped/in-flight tasks.
+	StateSaveError error
 }
 
 // Run executes the nightly cycle. The returned error is non-nil only
@@ -199,6 +208,7 @@ func (r *Runner) Run(ctx context.Context) (*RunResult, error) {
 
 	if err := r.State.SaveDir(r.Config.Paths.StateDir); err != nil {
 		fmt.Fprintf(os.Stderr, "runner: save state: %v\n", err)
+		result.StateSaveError = fmt.Errorf("save state: %w", err)
 	}
 
 	if succeeded == 0 && lastErr != nil {
@@ -594,6 +604,27 @@ func (r *Runner) publishOutcome(
 	if gateDecision.Allow {
 		if err := pub.AutoMerge(ctx, prNum); err != nil {
 			return fmt.Errorf("auto-merge: %w", err)
+		}
+		// AutoMerge only enables GitHub's async merge -- it doesn't
+		// confirm one happened. Poll briefly for confirmation before
+		// claiming StatusShipped: nothing else in this codebase ever
+		// re-examines a Shipped row once set (ReconcileFromGitHub
+		// treats existing rows as authoritative), so a false positive
+		// here means a PR with a real problem sits open, unmonitored,
+		// indefinitely.
+		confirmedMerged, err := pub.WaitForMerge(ctx, prNum, ghops.WaitForMergeOptions{})
+		if err != nil {
+			return fmt.Errorf("wait for merge: %w", err)
+		}
+		if !confirmedMerged {
+			// Not a failure -- auto-merge is enabled and may still land
+			// on its own. Leave it as draft-for-review rather than
+			// silently asserting "shipped" on faith.
+			_ = pub.CommentOnPR(ctx, prNum,
+				"⏳ Auto-merge enabled but not confirmed merged within the confirmation window. "+
+					"It may still land on its own; if not, check for a new required check or a merge-queue conflict.")
+			oc.Status = state.StatusDraft
+			return nil
 		}
 		merged[oc.Branch] = true
 		oc.Status = state.StatusShipped

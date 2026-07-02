@@ -153,6 +153,14 @@ func cmdRun(args []string) int {
 	fmt.Printf("burndown: digest written to %s\n", res.DigestPath)
 	fmt.Printf("burndown: $%.4f spent / %d outcomes / %d shipped\n",
 		res.Stats.DollarsSpent, len(res.Outcomes), len(res.MergedBranches))
+	if res.StateSaveError != nil {
+		// The run itself completed (outcomes above are real), but the
+		// cross-night queue state failed to persist -- exit nonzero so
+		// this shows as a failed CI run instead of silently looking
+		// like a normal success with a buried stderr warning.
+		fmt.Fprintf(os.Stderr, "burndown: %v\n", res.StateSaveError)
+		return 1
+	}
 	return 0
 }
 

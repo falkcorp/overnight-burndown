@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/google/go-github/v84/github"
 )
@@ -125,6 +126,114 @@ func TestAutoMerge_PropagatesGraphQLError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "auto-merge not enabled") {
 		t.Errorf("error should surface graphql message: %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// WaitForMerge: confirms an actual merge rather than trusting AutoMerge's
+// "enabled" response. Regression tests for the bug where callers marked a
+// task StatusShipped immediately after AutoMerge succeeded, even though
+// AutoMerge only enables an async mutation and never confirms completion.
+// ---------------------------------------------------------------------------
+
+func TestWaitForMerge_ReturnsTrueWhenAlreadyMerged(t *testing.T) {
+	api := &fakeMutateAPI{
+		prHandler: func(w http.ResponseWriter, _ *http.Request) {
+			writeJSON(w, map[string]any{"number": 42, "state": "closed", "merged": true})
+		},
+	}
+	client, cleanup := api.start(t, "jdfalk/x")
+	defer cleanup()
+
+	pub := &Publisher{GitHub: client, Owner: "jdfalk", Name: "x"}
+	merged, err := pub.WaitForMerge(context.Background(), 42, WaitForMergeOptions{})
+	if err != nil {
+		t.Fatalf("WaitForMerge: %v", err)
+	}
+	if !merged {
+		t.Error("expected merged=true")
+	}
+}
+
+func TestWaitForMerge_PollsUntilMerged(t *testing.T) {
+	var calls atomic.Int32
+	api := &fakeMutateAPI{
+		prHandler: func(w http.ResponseWriter, _ *http.Request) {
+			n := calls.Add(1)
+			writeJSON(w, map[string]any{"number": 42, "state": "open", "merged": n >= 3})
+		},
+	}
+	client, cleanup := api.start(t, "jdfalk/x")
+	defer cleanup()
+
+	pub := &Publisher{GitHub: client, Owner: "jdfalk", Name: "x"}
+	merged, err := pub.WaitForMerge(context.Background(), 42, WaitForMergeOptions{
+		Timeout:      time.Minute,
+		PollInterval: time.Millisecond, // fast for the test
+	})
+	if err != nil {
+		t.Fatalf("WaitForMerge: %v", err)
+	}
+	if !merged {
+		t.Error("expected merged=true after polling")
+	}
+	if got := calls.Load(); got < 3 {
+		t.Errorf("expected at least 3 polls, got %d", got)
+	}
+}
+
+func TestWaitForMerge_TimesOutStillOpen(t *testing.T) {
+	fakeNow := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	api := &fakeMutateAPI{
+		prHandler: func(w http.ResponseWriter, _ *http.Request) {
+			writeJSON(w, map[string]any{"number": 42, "state": "open", "merged": false})
+		},
+	}
+	client, cleanup := api.start(t, "jdfalk/x")
+	defer cleanup()
+
+	pub := &Publisher{GitHub: client, Owner: "jdfalk", Name: "x"}
+	merged, err := pub.WaitForMerge(context.Background(), 42, WaitForMergeOptions{
+		Timeout:      10 * time.Second,
+		PollInterval: 20 * time.Second, // longer than timeout: exits on first check past deadline
+		Now: func() time.Time {
+			t := fakeNow
+			fakeNow = fakeNow.Add(11 * time.Second) // jump past the deadline after the first check
+			return t
+		},
+	})
+	if err != nil {
+		t.Fatalf("WaitForMerge: %v", err)
+	}
+	if merged {
+		t.Error("expected merged=false on timeout -- caller must not treat this as shipped")
+	}
+}
+
+func TestWaitForMerge_ClosedWithoutMergingReturnsFalseImmediately(t *testing.T) {
+	var calls atomic.Int32
+	api := &fakeMutateAPI{
+		prHandler: func(w http.ResponseWriter, _ *http.Request) {
+			calls.Add(1)
+			writeJSON(w, map[string]any{"number": 42, "state": "closed", "merged": false})
+		},
+	}
+	client, cleanup := api.start(t, "jdfalk/x")
+	defer cleanup()
+
+	pub := &Publisher{GitHub: client, Owner: "jdfalk", Name: "x"}
+	merged, err := pub.WaitForMerge(context.Background(), 42, WaitForMergeOptions{
+		Timeout:      time.Minute,
+		PollInterval: time.Minute, // would hang if this test didn't short-circuit on closed
+	})
+	if err != nil {
+		t.Fatalf("WaitForMerge: %v", err)
+	}
+	if merged {
+		t.Error("expected merged=false: PR was closed without merging")
+	}
+	if got := calls.Load(); got != 1 {
+		t.Errorf("expected exactly 1 poll (no retry after closed-without-merge), got %d", got)
 	}
 }
 

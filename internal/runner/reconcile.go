@@ -1,5 +1,5 @@
 // file: internal/runner/reconcile.go
-// version: 1.0.0
+// version: 1.1.0
 // guid: c4d5e6f7-a8b9-0c1d-2e3f-4a5b6c7d8e9f
 
 package runner
@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/go-github/v84/github"
 
+	"github.com/falkcorp/overnight-burndown/internal/ghops"
 	"github.com/falkcorp/overnight-burndown/internal/state"
 )
 
@@ -122,6 +123,18 @@ func (r *Runner) mergeApprovedPRs(
 			branch := pr.GetHead().GetRef()
 			if err := pub.AutoMerge(ctx, prNum); err != nil {
 				fmt.Fprintf(os.Stderr, "runner: merge-approved: AutoMerge #%d: %v\n", prNum, err)
+				continue
+			}
+			// Same reasoning as publishOutcome: AutoMerge only enables
+			// the async merge, doesn't confirm it. Don't mark shipped
+			// on faith.
+			confirmedMerged, err := pub.WaitForMerge(ctx, prNum, ghops.WaitForMergeOptions{})
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "runner: merge-approved: wait for merge #%d: %v\n", prNum, err)
+				continue
+			}
+			if !confirmedMerged {
+				fmt.Fprintf(os.Stderr, "runner: merge-approved: PR #%d auto-merge enabled but not confirmed merged yet\n", prNum)
 				continue
 			}
 			merged[branch] = true
