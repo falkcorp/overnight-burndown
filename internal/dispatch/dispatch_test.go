@@ -388,6 +388,97 @@ func TestDispatch_RequiresHooks(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// callOnTaskDone: retries transient OnTaskDone failures, and reports
+// whether the hub label write ultimately succeeded so the Outcome can be
+// flagged for a persistent failure.
+// ---------------------------------------------------------------------------
+
+func TestCallOnTaskDone_RetriesThenSucceeds(t *testing.T) {
+	origBackoff := onTaskDoneBackoff
+	onTaskDoneBackoff = time.Millisecond
+	defer func() { onTaskDoneBackoff = origBackoff }()
+
+	var calls atomic.Int32
+	d := &Dispatcher{
+		OnTaskDone: func(context.Context, int, bool) error {
+			if calls.Add(1) < 3 {
+				return errors.New("transient 500")
+			}
+			return nil
+		},
+	}
+
+	ok := d.callOnTaskDone(context.Background(), 42, true)
+	if !ok {
+		t.Error("expected callOnTaskDone to report success after retries")
+	}
+	if calls.Load() != 3 {
+		t.Errorf("expected 3 attempts, got %d", calls.Load())
+	}
+}
+
+func TestCallOnTaskDone_GivesUpAfterExhaustingRetries(t *testing.T) {
+	origBackoff := onTaskDoneBackoff
+	onTaskDoneBackoff = time.Millisecond
+	defer func() { onTaskDoneBackoff = origBackoff }()
+
+	var calls atomic.Int32
+	d := &Dispatcher{
+		OnTaskDone: func(context.Context, int, bool) error {
+			calls.Add(1)
+			return errors.New("permission denied")
+		},
+	}
+
+	ok := d.callOnTaskDone(context.Background(), 42, true)
+	if ok {
+		t.Error("expected callOnTaskDone to report failure when every attempt errors")
+	}
+	if calls.Load() != onTaskDoneRetries {
+		t.Errorf("expected %d attempts, got %d", onTaskDoneRetries, calls.Load())
+	}
+}
+
+// TestDispatch_HubLabelWriteFailurePropagatesToOutcome is the core
+// regression test for the swallowed-error bug: when OnTaskDone
+// persistently fails after a successful agent run, the Outcome must
+// still report Status == StatusInFlight (the agent DID succeed — don't
+// downgrade real work to failed) but with HubLabelWriteFailed set, so
+// callers can surface it instead of silently losing the signal to a
+// stderr print.
+func TestDispatch_HubLabelWriteFailurePropagatesToOutcome(t *testing.T) {
+	origBackoff := onTaskDoneBackoff
+	onTaskDoneBackoff = time.Millisecond
+	defer func() { onTaskDoneBackoff = origBackoff }()
+
+	repo := makeRepo(t)
+	runAgent := func(_ context.Context, opts agent.Options) (*agent.Result, error) {
+		return &agent.Result{Summary: "edited " + opts.Task.Source.URL}, nil
+	}
+	d := fixtureDispatcher(t, repo, runAgent, defaultSpawnMCP())
+	d.OnTaskDone = func(context.Context, int, bool) error {
+		return errors.New("secondary rate limit")
+	}
+
+	items := []TaskWithDecision{
+		fixtureItem("https://github.com/falkcorp/burndown-tasks/issues/42", "Fix X", triage.ClassAutoMergeSafe, "auto/fix-x"),
+	}
+	out, err := d.Dispatch(context.Background(), items)
+	if err != nil {
+		t.Fatalf("Dispatch: %v", err)
+	}
+	if len(out) != 1 {
+		t.Fatalf("expected 1 outcome, got %d", len(out))
+	}
+	if out[0].Status != state.StatusInFlight {
+		t.Errorf("status: got %q, want %q (agent succeeded; a label-write failure must not mark it failed)", out[0].Status, state.StatusInFlight)
+	}
+	if !out[0].HubLabelWriteFailed {
+		t.Error("expected HubLabelWriteFailed=true when OnTaskDone persistently errors")
+	}
+}
+
+// ---------------------------------------------------------------------------
 // helpers shared with worktree_test.go's makeRepo
 // ---------------------------------------------------------------------------
 

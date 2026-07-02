@@ -1,3 +1,7 @@
+// file: internal/agent/openai.go
+// version: 1.1.0
+// guid: b2c3d4e5-f6a7-8901-bcde-f01234567890
+
 package agent
 
 import (
@@ -51,6 +55,17 @@ func is429(msg string) bool {
 	return strings.Contains(msg, "429") || strings.Contains(strings.ToLower(msg), "rate limit")
 }
 
+// isQuotaExhausted reports whether a 429 is OpenAI's "insufficient_quota"
+// (billing/plan exhaustion) rather than "rate_limit_exceeded" (transient,
+// worth backing off for). Both are 429s and both contain "429" in the SDK
+// error message, so is429 alone can't tell them apart — but only one of
+// them can ever succeed by waiting. insufficient_quota is permanent until
+// a human fixes billing; retrying it for the full 15-minute budget wastes
+// wall-clock and API calls on an error that cannot resolve itself.
+func isQuotaExhausted(msg string) bool {
+	return strings.Contains(msg, "insufficient_quota")
+}
+
 func callOpenAIWithRetry(ctx context.Context, client openai.Client, params openai.ChatCompletionNewParams) (*openai.ChatCompletion, error) {
 	deadline := timeNow().Add(retryBudget)
 	attempt := 0
@@ -63,6 +78,9 @@ func callOpenAIWithRetry(ctx context.Context, client openai.Client, params opena
 		msg := err.Error()
 		if !is429(msg) {
 			return nil, err
+		}
+		if isQuotaExhausted(msg) {
+			return nil, fmt.Errorf("openai quota exhausted, not retrying: %w", err)
 		}
 		if timeNow().After(deadline) {
 			return nil, fmt.Errorf("rate-limit retries exhausted (last err: %w)", err)

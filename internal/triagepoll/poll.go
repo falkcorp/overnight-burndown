@@ -1,5 +1,5 @@
 // file: internal/triagepoll/poll.go
-// version: 1.0.0
+// version: 1.1.0
 // guid: 6c7d8e9f-0a1b-2c3d-4e5f-6a7b8c9d0e1f
 //
 // Triage-poll state machine. Each invocation is stateless — all durable state
@@ -147,9 +147,17 @@ func applyResults(ctx context.Context, gh *github.Client, cfg PollConfig, hubOwn
 	var written, skipped int
 	for _, d := range result.Decisions {
 		if err := WriteTriageResult(ctx, gh, hubOwner, hubName, d.IssueNumber, d); err != nil {
-			slog.WarnContext(ctx, "triagepoll: write triage failed, skipping",
+			slog.WarnContext(ctx, "triagepoll: write triage failed, marking triage-failed",
 				"issue", d.IssueNumber, "err", err)
 			skipped++
+			// Best-effort: mark the issue so FindUntriagedIssues stops
+			// resubmitting it every cycle. If this also fails, the issue
+			// falls back to being resubmitted next cron run (the old
+			// behavior) rather than being silently dropped either way.
+			if _, _, labelErr := gh.Issues.AddLabelsToIssue(ctx, hubOwner, hubName, d.IssueNumber, []string{LabelTriageFailed}); labelErr != nil {
+				slog.ErrorContext(ctx, "triagepoll: could not mark triage-failed, issue will be resubmitted next cycle",
+					"issue", d.IssueNumber, "err", labelErr)
+			}
 			continue
 		}
 		written++

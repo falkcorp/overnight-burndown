@@ -1,5 +1,5 @@
 // file: internal/agent/openai_responses.go
-// version: 1.8.0
+// version: 1.9.0
 // guid: a1b2c3d4-e5f6-7890-abcd-ef0123456789
 //
 // OpenAI Responses API implementer agent. Counterpart to RunOpenAI in
@@ -299,6 +299,13 @@ func callResponsesWithRetry(ctx context.Context, client openai.Client, params re
 		msg := err.Error()
 		if !is429(msg) {
 			return nil, err
+		}
+		if isQuotaExhausted(msg) {
+			// Deliberately NOT wrapped in errRetriesExhausted: quota
+			// exhaustion is account-wide, not per-model, so falling back
+			// to the next model (the caller's response to
+			// errRetriesExhausted) would just hit the same wall again.
+			return nil, fmt.Errorf("openai quota exhausted, not retrying: %w", err)
 		}
 		if timeNow().After(deadline) {
 			return nil, fmt.Errorf("%w (last err: %v)", errRetriesExhausted, err)

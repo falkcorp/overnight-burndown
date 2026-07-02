@@ -70,6 +70,14 @@ type Outcome struct {
 	// was tried, in order. One entry means no escalation occurred.
 	AttemptedModels []string
 	Error           string // populated when Status == failed
+	// HubLabelWriteFailed is true when OnTaskDone (the ao: lifecycle label
+	// write to the hub issue) failed after retries. The hub label is the
+	// only durable cross-night record of task completion — local state
+	// lives in $RUNNER_TEMP and doesn't survive between CI job runs — so a
+	// failure here means the next night's pre-dispatch filter will not see
+	// this task as done and will re-dispatch it. Surfaced here (rather
+	// than only logged) so the digest can flag it for manual follow-up.
+	HubLabelWriteFailed bool
 }
 
 // SpawnMCPFunc returns an MCPClient configured to act on the given
@@ -248,7 +256,7 @@ func (d *Dispatcher) runOne(ctx context.Context, item TaskWithDecision, branch s
 	out.Model = res.Model
 	out.AttemptedModels = res.AttemptedModels
 	out.Status = state.StatusInFlight // agent finished; PR creation pending in step 9
-	d.callOnTaskDone(ctx, issueNum, true)
+	out.HubLabelWriteFailed = !d.callOnTaskDone(ctx, issueNum, true)
 	return out
 }
 
@@ -261,13 +269,40 @@ func (d *Dispatcher) callOnTaskStart(ctx context.Context, issueNum int) {
 	}
 }
 
-func (d *Dispatcher) callOnTaskDone(ctx context.Context, issueNum int, success bool) {
+// onTaskDoneRetries and onTaskDoneBackoff bound the retry loop below: the
+// hub label written here is the only durable cross-night signal that a
+// task finished, so a transient GitHub API failure (5xx, secondary rate
+// limit) shouldn't be allowed to silently strand the task as "not done"
+// and get it re-dispatched (re-running the agent, wasting tokens) the
+// next night.
+const onTaskDoneRetries = 3
+
+// onTaskDoneBackoff is a var (not const) so tests can shrink it.
+var onTaskDoneBackoff = 2 * time.Second
+
+// callOnTaskDone reports whether the hub label write ultimately succeeded
+// (after retries), so runOne can flag the Outcome when it didn't.
+func (d *Dispatcher) callOnTaskDone(ctx context.Context, issueNum int, success bool) bool {
 	if d.OnTaskDone == nil || issueNum == 0 {
-		return
+		return true
 	}
-	if err := d.OnTaskDone(ctx, issueNum, success); err != nil {
-		fmt.Fprintf(os.Stderr, "dispatch: OnTaskDone #%d success=%v: %v\n", issueNum, success, err)
+	var err error
+retryLoop:
+	for attempt := 1; attempt <= onTaskDoneRetries; attempt++ {
+		if err = d.OnTaskDone(ctx, issueNum, success); err == nil {
+			return true
+		}
+		if attempt < onTaskDoneRetries {
+			select {
+			case <-ctx.Done():
+				break retryLoop
+			case <-time.After(onTaskDoneBackoff * time.Duration(attempt)):
+			}
+		}
 	}
+	fmt.Fprintf(os.Stderr, "dispatch: OnTaskDone #%d success=%v: %v (gave up after %d attempts)\n",
+		issueNum, success, err, onTaskDoneRetries)
+	return false
 }
 
 // IssueNumberFromTask extracts the GitHub issue number from Task.Source.URL.

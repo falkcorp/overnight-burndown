@@ -397,6 +397,14 @@ func (r *Runner) runRepo(ctx context.Context, repoCfg config.RepoConfig, t triag
 		return nil, fmt.Errorf("dispatch: %w", err)
 	}
 
+	for i := range outcomes {
+		if outcomes[i].HubLabelWriteFailed {
+			issueNum := dispatch.IssueNumberFromTask(outcomes[i].Task)
+			slog.WarnContext(ctx, "ao:code-complete label write failed after retries; task may be re-dispatched tomorrow",
+				"issue", issueNum, "branch", outcomes[i].Branch)
+		}
+	}
+
 	// ghops sequence per outcome.
 	pub := r.NewPublisher(ghClient, ts, repoCfg)
 

@@ -1,5 +1,5 @@
 // file: internal/triagepoll/github.go
-// version: 2.0.1
+// version: 2.1.0
 // guid: 4e5f6a7b-8c9d-0e1f-2a3b-4c5d6e7f8a9b
 //
 // GitHub interactions for the triage-poll state machine: querying untriaged
@@ -20,6 +20,12 @@ const (
 	LabelTriaged = "triaged"
 	// LabelBatchPending marks the tracking issue while a batch is in-flight.
 	LabelBatchPending = "burndown:batch-pending"
+	// LabelTriageFailed marks a hub issue whose triage result could not be
+	// written back (e.g. AddLabelsToIssue failed). Excluded from
+	// FindUntriagedIssues so a persistent per-issue failure costs one wasted
+	// OpenAI decision instead of resubmitting every 30-min cron cycle
+	// forever. A human has to notice and remove the label to retry.
+	LabelTriageFailed = "burndown:triage-failed"
 
 	trackingTitlePrefix = "burndown-triage-batch:"
 )
@@ -51,7 +57,7 @@ func FindUntriagedIssues(ctx context.Context, gh *github.Client, hubOwner, hubNa
 			if iss.PullRequestLinks != nil {
 				continue
 			}
-			if hasLabel(iss, LabelTriaged) || hasLabel(iss, LabelBatchPending) {
+			if hasLabel(iss, LabelTriaged) || hasLabel(iss, LabelBatchPending) || hasLabel(iss, LabelTriageFailed) {
 				continue
 			}
 			body := ""
@@ -143,21 +149,30 @@ func CloseTrackingIssue(ctx context.Context, gh *github.Client, hubOwner, hubNam
 	return nil
 }
 
-// WriteTriageResult posts the triage decision as a comment on the issue
-// and adds the triaged + priority labels.
+// WriteTriageResult adds the triaged + priority labels to the issue, then
+// posts the triage decision as a comment.
+//
+// Labels are applied first, deliberately: AddLabelsToIssue is what
+// FindUntriagedIssues checks to decide whether an issue still needs triage,
+// so if it fails, the issue is correctly left untriaged and simply retried
+// next cycle — no comment is posted for a decision that wasn't durably
+// recorded. Doing it comment-first (the previous order) meant a persistent
+// label-write failure produced an unbounded stream of duplicate "triage
+// complete" comments on the same issue, once per 30-min cron cycle, while
+// the issue never actually left the untriaged set.
 func WriteTriageResult(ctx context.Context, gh *github.Client, hubOwner, hubName string, issueNumber int, d Decision) error {
-	body := formatTriageComment(d)
-	if _, _, err := gh.Issues.CreateComment(ctx, hubOwner, hubName, issueNumber, &github.IssueComment{
-		Body: github.Ptr(body),
-	}); err != nil {
-		return fmt.Errorf("triagepoll: comment #%d: %w", issueNumber, err)
-	}
 	labels := []string{LabelTriaged}
 	if d.Priority != "" {
 		labels = append(labels, "priority:"+d.Priority)
 	}
 	if _, _, err := gh.Issues.AddLabelsToIssue(ctx, hubOwner, hubName, issueNumber, labels); err != nil {
 		return fmt.Errorf("triagepoll: label #%d: %w", issueNumber, err)
+	}
+	body := formatTriageComment(d)
+	if _, _, err := gh.Issues.CreateComment(ctx, hubOwner, hubName, issueNumber, &github.IssueComment{
+		Body: github.Ptr(body),
+	}); err != nil {
+		return fmt.Errorf("triagepoll: comment #%d: %w", issueNumber, err)
 	}
 	return nil
 }
@@ -171,6 +186,7 @@ func EnsureLabelsExist(ctx context.Context, gh *github.Client, hubOwner, hubName
 	}{
 		{LabelTriaged, "0e8a16", "Triage decision written; ready for dispatch"},
 		{LabelBatchPending, "e4e669", "OpenAI batch triage in flight"},
+		{LabelTriageFailed, "b60205", "Triage result failed to write back; needs manual retry"},
 		{"priority:P0", "b60205", "Production outage / data loss / security"},
 		{"priority:P1", "d93f0b", "Core feature broken; blocks other work"},
 		{"priority:P2", "e4e669", "Standard bug fix or feature"},
