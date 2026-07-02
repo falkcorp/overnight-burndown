@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`internal/runner`** (2026-07-02): `State.SaveDir()` failure at the end of
+  a run was only logged; the process still exited 0. Added
+  `RunResult.StateSaveError` and `cmdRun` now exits 1 when it's set (after
+  still printing the real digest/stats, so that info isn't lost).
+  `publishOutcome` and `mergeApprovedPRs` marked `StatusShipped` immediately
+  after `AutoMerge()` returned nil, even though `AutoMerge` only *enables*
+  GitHub's async merge and never confirms one happened — nothing else in
+  the codebase ever re-examines a `StatusShipped` row once set
+  (`ReconcileFromGitHub` treats existing rows as authoritative). Added
+  `Publisher.WaitForMerge` (bounded confirmation poll, same pattern as
+  `WatchCI`); both call sites now only mark shipped when it actually
+  confirms the merge.
 - **`internal/triagepoll`** (2026-07-02): `WriteTriageResult` posted the triage
   comment *before* adding the `triaged` label, so a persistent label-write
   failure produced an unbounded stream of duplicate "triage complete"
