@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`internal/triagepoll`** (2026-07-02): `WriteTriageResult` posted the triage
+  comment *before* adding the `triaged` label, so a persistent label-write
+  failure produced an unbounded stream of duplicate "triage complete"
+  comments every 30-min cron cycle while the issue never left the untriaged
+  set. Reordered to label-then-comment; added a `burndown:triage-failed`
+  label (excluded from `FindUntriagedIssues`) so a persistent per-issue
+  fault costs one wasted OpenAI decision instead of unbounded retries.
+- **`internal/dispatch`** (2026-07-02): `SetCodeComplete`'s error was only
+  logged to stderr and discarded. Since CI's `$RUNNER_TEMP`-backed local
+  state doesn't survive between nightly job runs, the `ao:code-complete`
+  GitHub label is the only durable signal a task finished — a transient
+  write failure meant the next night silently re-dispatched (and re-paid
+  the agent for) a task that already had an open PR. Added bounded retry
+  (3 attempts, backoff) and a new `Outcome.HubLabelWriteFailed` flag
+  surfaced via a `slog.WarnContext` instead of a silent stderr print.
+- **`internal/agent`** (2026-07-02): `is429()` couldn't distinguish OpenAI's
+  `insufficient_quota` (permanent billing exhaustion) from
+  `rate_limit_exceeded` (transient) — both matched the same substring
+  check, so both got the full 15-minute retry budget, wasting wall-clock
+  on an error that can never resolve itself. Added `isQuotaExhausted()`;
+  both `callOpenAIWithRetry` and `callResponsesWithRetry` now fail fast on
+  quota exhaustion instead of retrying.
 - **`internal/agent/openai_responses.go`** (PR #62): Removed `ContextManagement`
   from `ResponseNewParams`. OpenAI's Responses API rejects the field with
   `400 "Unsupported context_management type: ''"` even when `Type: "compaction"`
