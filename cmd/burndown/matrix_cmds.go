@@ -1,5 +1,5 @@
 // file: cmd/burndown/matrix_cmds.go
-// version: 1.1.0
+// version: 1.1.1
 // guid: 8b9c0d1e-2f3a-4b5c-9d6e-7f8a9b0c1d2e
 //
 // Matrix-mode subcommands: triage, dispatch-one, aggregate.
@@ -362,10 +362,6 @@ func buildRunnerForDispatchCfg(cfg *config.Config) (*runner.Runner, error) {
 // buildRunnerForAggregateCfg is the --from-env equivalent of buildRunnerForAggregate.
 func buildRunnerForAggregateCfg(cfg *config.Config) (*runner.Runner, error) {
 	return &runner.Runner{Config: *cfg}, nil
-}
-
-func buildRunnerNoValidate(configPath string, dryRun bool) (*runner.Runner, error) {
-	return buildRunner(configPath, dryRun, false)
 }
 
 // buildRunnerForDispatch builds a Runner for dispatch-one. Unlike
