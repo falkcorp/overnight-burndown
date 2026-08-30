@@ -1,6 +1,7 @@
 # Dependabot Configuration
-# version: 1.0.0
+# version: 1.1.0
 # guid: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+# last-edited: 2026-08-30
 
 version: 2
 
@@ -27,6 +28,19 @@ updates:
     labels:
       - github-actions
       - ci-cd
+
+  # Git Submodules — .standards is the org-wide coding standards submodule
+  # (falkcorp/.github). It is a pinned commit, not a live link: without this
+  # entry the pin only moves when someone remembers to bump it by hand, and
+  # nobody did between 2026-06-12 and 2026-08-30 while instructions/go.md
+  # gained 331 lines. CLAUDE.md points contributors at .standards/ as
+  # authoritative, so a stale pin silently serves outdated rules.
+  - package-ecosystem: gitsubmodule
+    directory: /
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+    labels:
+      - documentation
 
   # Gomod
   - package-ecosystem: gomod
