@@ -2,8 +2,6 @@ module github.com/falkcorp/overnight-burndown
 
 go 1.27.0
 
-toolchain go1.26.2
-
 require (
 	github.com/anthropics/anthropic-sdk-go v1.38.0
 	github.com/bradleyfalzon/ghinstallation/v2 v2.18.0
