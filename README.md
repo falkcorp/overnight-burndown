@@ -28,7 +28,7 @@ Source: [`PLAN.md`](PLAN.md) for the full architecture and locked design decisio
 ### 1. Install the binary
 
 ```bash
-git clone https://github.com/jdfalk/overnight-burndown.git
+git clone https://github.com/falkcorp/overnight-burndown.git
 cd overnight-burndown
 make build
 sudo install -m 755 bin/burndown /usr/local/bin/burndown
@@ -42,10 +42,10 @@ test + build), which is what this project's CI runs on every PR.
 
 ```bash
 # safe-ai-util (the Rust trust boundary)
-cargo install --git https://github.com/jdfalk/safe-ai-util safe-ai-util
+cargo install --git https://github.com/falkcorp/safe-ai-util safe-ai-util
 
 # safe-ai-util-mcp (the Python MCP shim)
-pip install --user 'safe-ai-util-mcp @ git+https://github.com/jdfalk/safe-ai-util-mcp'
+pip install --user 'safe-ai-util-mcp @ git+https://github.com/falkcorp/safe-ai-util-mcp'
 ```
 
 Both must be on `$PATH` for the burndown driver to spawn them.
@@ -91,9 +91,9 @@ via `make pause`; resume via `make resume`.
 ## Trust model
 
 Every filesystem, exec, and git operation that the implementer agent performs
-routes through [`safe-ai-util`](https://github.com/jdfalk/safe-ai-util) (Rust
+routes through [`safe-ai-util`](https://github.com/falkcorp/safe-ai-util) (Rust
 trust boundary) via
-[`safe-ai-util-mcp`](https://github.com/jdfalk/safe-ai-util-mcp). The driver
+[`safe-ai-util-mcp`](https://github.com/falkcorp/safe-ai-util-mcp). The driver
 holds the GitHub App credentials and is the only thing that opens PRs or
 merges. **Agents cannot:**
 
