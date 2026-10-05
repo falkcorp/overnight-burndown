@@ -35,7 +35,7 @@ jobs:
       - name: Checkout audiobook-organizer (target repo)
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
-          repository: jdfalk/audiobook-organizer
+          repository: falkcorp/audiobook-organizer
           path: targets/audiobook-organizer
           fetch-depth: 1
 

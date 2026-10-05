@@ -12,9 +12,9 @@ morning digest. Every action gated through `safe-ai-util` for structural (not pr
 
 | Repo | Role | State |
 |------|------|-------|
-| `jdfalk/overnight-burndown` | New. Go driver + launchd plist + digest. | To create. Public + CI. |
-| `jdfalk/safe-ai-util` | Existing. Rust trust boundary. | v1.4.2 installed. Needs Phase 0 work. |
-| `jdfalk/safe-ai-util-mcp` | Existing. MCP server bridging safe-ai-util to LLM tool use. | Bootstrap. Needs tool expansion. |
+| `falkcorp/overnight-burndown` | New. Go driver + launchd plist + digest. | To create. Public + CI. |
+| `falkcorp/safe-ai-util` | Existing. Rust trust boundary. | v1.4.2 installed. Needs Phase 0 work. |
+| `falkcorp/safe-ai-util-mcp` | Existing. MCP server bridging safe-ai-util to LLM tool use. | Bootstrap. Needs tool expansion. |
 
 ## Architecture
 
@@ -121,7 +121,7 @@ Branch: `feat/burndown-tool-expansion`.
 
 ## Phase 1 — burndown driver MVP
 
-Repo: `jdfalk/overnight-burndown` (public, MIT or Apache-2.0)
+Repo: `falkcorp/overnight-burndown` (public, MIT or Apache-2.0)
 
 ```
 overnight-burndown/
